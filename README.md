@@ -24,6 +24,7 @@ Initial quick and dirty draft. Code not optimized yet, can still contain bugs. F
 - Allow for delayed bot responses (for example when human confirmation is required before the bot sends a response back)
 - Allow conversation termination when either a human agent is assigned, or the ticket status is marked as resolved
 - Allow adding a private note for human engineer, instead of immediate responses to customer (via bot channeldata)
+- Setting ticket state to pending after bot answer
 - Provide additional insights in what the bot is doing
 - Hand off ticket to human
 - Trim signatures from the tickets that have as source email
