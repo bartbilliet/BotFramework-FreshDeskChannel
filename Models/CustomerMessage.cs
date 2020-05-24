@@ -5,7 +5,7 @@ using System.Text;
 
 namespace BotFramework.FreshDeskChannel.Models
 {
-    public class UserMessage
+    public class CustomerMessage
     {
         public string RequesterName { get; set; }
         public string FromEmail { get; set; }

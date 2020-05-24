@@ -1,23 +1,17 @@
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration;
-using BotFramework.FreshDeskChannel.Shared;
 using System.Reflection;
+using System.Threading.Tasks;
+using BotFramework.FreshDeskChannel.Shared;
+using Microsoft.Azure.WebJobs;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace BotFramework.FreshDeskChannel
 {
-    public static class PollFreshDeskTicket_Http
+    public static class PollFreshDeskTickets_Timer
     {
-
-        [FunctionName("PollFreshDeskTicket_Http")]
-        public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
-            ExecutionContext context,
-            ILogger log)
+        
+        [FunctionName("PollFreshDeskTickets_Timer")]
+        public static async Task RunAsync([TimerTrigger("0 */5 * * * *")]TimerInfo myTimer, ExecutionContext context, ILogger log)
         {
 
             //Read config values
@@ -28,11 +22,8 @@ namespace BotFramework.FreshDeskChannel
                 .Build();
 
             await CustomChannelLogic.ProcessChannel(config, log);
-            
-            
-            return new OkObjectResult("ok");
+
         }
-
+         
     }
-
 }

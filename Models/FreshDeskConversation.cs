@@ -7,10 +7,10 @@ namespace BotFramework.FreshDeskChannel.Models
 {
     public class FreshDeskConversation
     {
-        public string from_email { get; set; }
-        public string body_text { get; set; }
-        public bool incoming { get; set; }
-        public bool @private { get; set; }
-        public DateTime updated_at { get; set; }
+        public string From_email { get; set; }
+        public string Body_text { get; set; }
+        public bool Incoming { get; set; }
+        public bool Private { get; set; }
+        public DateTime Updated_at { get; set; }
     }
 }
