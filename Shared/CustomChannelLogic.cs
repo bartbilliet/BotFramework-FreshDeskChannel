@@ -65,17 +65,28 @@ namespace BotFramework.FreshDeskChannel.Shared
 
 
                 // List new customer messages in FreshDesk
-                List<CustomerMessage> listCustomerMessagesToProcess = new List<CustomerMessage>();
+                List<FreshDeskChannelData> listCustomerMessagesToProcess = new List<FreshDeskChannelData>();
 
                 //Original ticket description to process?
                 if (FreshDeskTicket.Created_at > LastRun)
                 {
-                    CustomerMessage customerInitialMessage = new CustomerMessage()
+                    FreshDeskChannelData customerInitialMessage = new FreshDeskChannelData()
                     {
+                        TicketId = FreshDeskTicket.Id,
+                        Subject = FreshDeskTicket.Subject,
+                        Message = FreshDeskTicket.Description_text,
+                        Group_id = FreshDeskTicket.Group_id,
+                        Responder_id = FreshDeskTicket.Responder_id,
+                        Source = FreshDeskTicket.Source,
+                        Company_id = FreshDeskTicket.Company_id,
+                        Status = (FreshDeskChannelData.FreshDeskTicketStatus) FreshDeskTicket.Status,
+                        Product_id = FreshDeskTicket.Product_id,
+                        Due_by = FreshDeskTicket.Due_by,
+                        MessageType = "initial_message",
                         FromEmail = FreshDeskTicket.Requester.Email,
                         RequesterName = FreshDeskTicket.Requester.Name,
-                        Subject = FreshDeskTicket.Subject,
-                        Message = FreshDeskTicket.Description_text
+                        Mobile = FreshDeskTicket.Requester.Mobile,
+                        Phone = FreshDeskTicket.Requester.Phone
                     };
                     listCustomerMessagesToProcess.Add(customerInitialMessage);
                 }
@@ -89,23 +100,35 @@ namespace BotFramework.FreshDeskChannel.Shared
                                                                                          select c).ToList();
                 foreach (FreshDeskConversation incomingConversation in listIncomingConversationsSinceLastRun)
                 {
-                    CustomerMessage customerConversationMessage = new CustomerMessage()
+                    FreshDeskChannelData customerConversationMessage = new FreshDeskChannelData()
                     {
+                        TicketId = FreshDeskTicket.Id,
+                        Subject = FreshDeskTicket.Subject,
+                        Message = incomingConversation.Body_text,
+                        Group_id = FreshDeskTicket.Group_id,
+                        Responder_id = FreshDeskTicket.Responder_id,
+                        Source = FreshDeskTicket.Source,
+                        Company_id = FreshDeskTicket.Company_id,
+                        Status = (FreshDeskChannelData.FreshDeskTicketStatus)FreshDeskTicket.Status,
+                        Product_id = FreshDeskTicket.Product_id,
+                        Due_by = FreshDeskTicket.Due_by,
+                        MessageType = "continued_conversation",
                         FromEmail = incomingConversation.From_email,
                         RequesterName = FreshDeskTicket.Requester.Name,
-                        Subject = "",
-                        Message = incomingConversation.Body_text
+                        Mobile = FreshDeskTicket.Requester.Mobile,
+                        Phone = FreshDeskTicket.Requester.Phone
                     };
+
                     listCustomerMessagesToProcess.Add(customerConversationMessage);
                 }
 
 
                 // Send new customer messages to Bot Framework for processing
-                foreach (CustomerMessage customerMessage in listCustomerMessagesToProcess)
+                foreach (FreshDeskChannelData freshDeskChannelData in listCustomerMessagesToProcess)
                 {
                     //Send ticket updates to Bot
-                    log.LogInformation("Send user message to bot: " + customerMessage.Message);
-                    await BotFrameworkDirectLine.SendMessagesAsync(freshDeskBotState.BotConversationId, customerMessage.Subject, customerMessage.Message, log);
+                    log.LogInformation("Send user message to bot: " + freshDeskChannelData.Message);
+                    await BotFrameworkDirectLine.SendMessagesAsync(freshDeskBotState.BotConversationId, freshDeskChannelData, log);
                 }
 
 
