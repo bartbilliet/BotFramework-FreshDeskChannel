@@ -1,10 +1,8 @@
-﻿using Microsoft.Bot.Connector.DirectLine;
+﻿using BotFramework.FreshDeskChannel.Models;
+using Microsoft.Bot.Connector.DirectLine;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace BotFramework.FreshDeskChannel
@@ -50,26 +48,36 @@ namespace BotFramework.FreshDeskChannel
             }
         }
 
-        public static async Task SendMessagesAsync(string conversationId, string input, ILogger log)
+        public static async Task SendMessagesAsync(string conversationId, string subject, string message, ILogger log)
         {
             try
             {
-                if (input.Length > 0)
+                Activity userMessage = new Activity
                 {
-                    Activity userMessage = new Activity
+                    From = new ChannelAccount(fromUser),
+                    Text = message,
+                    Type = ActivityTypes.Message
+                };
+
+                if (subject != "")
+                {
+                    var freshDeskChannelData = new FreshDeskChannelData()
                     {
-                        From = new ChannelAccount(fromUser),
-                        Text = input,
-                        Type = ActivityTypes.Message
+                        TicketSubject = subject
                     };
 
-                    await client.Conversations.PostActivityAsync(conversationId, userMessage);
-
-                    //TODO: handle the silent retry issue when bot receives a 15s timeout (and therefore processes the message twice)
-                    //- https://github.com/microsoft/botframework-sdk/issues/3122
-                    //- https://github.com/microsoft/botframework-sdk/issues/50687
-                    //- https://github.com/microsoft/botframework-sdk/issues/4559
+                    userMessage.ChannelData = freshDeskChannelData;
                 }
+
+                //TODO: Handle the silent retry issue when bot receives a 15s timeout (and therefore processes the message twice)
+                //This issue produces when Bot Framework code is hosted on App Service and the App Service goes to sleep. 
+                //Host the bot on App Service using AlwaysOn or Azure Function to avoid at this time.
+                //- https://github.com/microsoft/botframework-sdk/issues/3122
+                //- https://github.com/microsoft/botframework-sdk/issues/5068
+                //- https://github.com/microsoft/botframework-sdk/issues/4559
+
+                await client.Conversations.PostActivityAsync(conversationId, userMessage);
+
             }
             catch (Exception ex)
             {

@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using BotFramework.FreshDeskChannel.Shared;
-using System.Reflection;
+using System;
 
 namespace BotFramework.FreshDeskChannel
 {
@@ -20,17 +20,25 @@ namespace BotFramework.FreshDeskChannel
             ILogger log)
         {
 
-            //Read config values
-            var config = new ConfigurationBuilder()
-                .SetBasePath(context.FunctionAppDirectory)
-                .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true) // <- This gives you access to your application settings in your local development environment
-                .AddEnvironmentVariables() // <- This is what actually gets you the application settings in Azure
-                .Build();
+            try
+            {
+                //Read config values
+                var config = new ConfigurationBuilder()
+                    .SetBasePath(context.FunctionAppDirectory)
+                    .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true) // <- This gives you access to your application settings in your local development environment
+                    .AddEnvironmentVariables() // <- This is what actually gets you the application settings in Azure
+                    .Build();
 
-            await CustomChannelLogic.ProcessChannel(config, log);
-            
-            
-            return new OkObjectResult("ok");
+                await CustomChannelLogic.ProcessChannel(config, log);
+
+                return new OkObjectResult("Ok");
+            }
+            catch (Exception ex)
+            {
+                log.LogError("Exception occurred in processing Azure Function: {1}", ex);
+                return new StatusCodeResult(500);
+            }
+ 
         }
 
     }

@@ -80,11 +80,11 @@ namespace BotFramework.FreshDeskChannel
 
                 if (response.IsSuccessStatusCode)
                 {
-                    log.LogInformation("Reply succeeded");
+                    log.LogInformation("Bot response sent to FreshDesk");
                 }
                 else
                 {
-                    log.LogError("Reply failed");
+                    log.LogError("Error sending Bot resonse to FreshDesk");
                 }
             }
             catch (Exception ex)

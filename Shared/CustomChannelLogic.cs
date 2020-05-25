@@ -74,6 +74,7 @@ namespace BotFramework.FreshDeskChannel.Shared
                     {
                         FromEmail = FreshDeskTicket.Requester.Email,
                         RequesterName = FreshDeskTicket.Requester.Name,
+                        Subject = FreshDeskTicket.Subject,
                         Message = FreshDeskTicket.Description_text
                     };
                     listCustomerMessagesToProcess.Add(customerInitialMessage);
@@ -91,8 +92,9 @@ namespace BotFramework.FreshDeskChannel.Shared
                     CustomerMessage customerConversationMessage = new CustomerMessage()
                     {
                         FromEmail = incomingConversation.From_email,
-                        Message = incomingConversation.Body_text,
-                        RequesterName = FreshDeskTicket.Requester.Name                        
+                        RequesterName = FreshDeskTicket.Requester.Name,
+                        Subject = "",
+                        Message = incomingConversation.Body_text
                     };
                     listCustomerMessagesToProcess.Add(customerConversationMessage);
                 }
@@ -103,7 +105,7 @@ namespace BotFramework.FreshDeskChannel.Shared
                 {
                     //Send ticket updates to Bot
                     log.LogInformation("Send user message to bot: " + customerMessage.Message);
-                    await BotFrameworkDirectLine.SendMessagesAsync(freshDeskBotState.BotConversationId, customerMessage.Message, log);
+                    await BotFrameworkDirectLine.SendMessagesAsync(freshDeskBotState.BotConversationId, customerMessage.Subject, customerMessage.Message, log);
                 }
 
 
