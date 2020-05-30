@@ -5,10 +5,19 @@ using System.Text;
 
 namespace BotFramework.FreshDeskChannel.Models
 {
-    class BotResponseChannelData
+    public class BotResponseChannelData
     {
+        public enum FreshDeskTicketStatus
+        {
+            Open = 2,
+            Pending = 3,
+            Resolved = 4,
+            Closed = 5
+        }
+
         public string MessageType { get; set; }
         public bool Private { get; set; }
         public string[] NotifyEmails { get; set; }
+        public FreshDeskTicketStatus Status { get; set; }
     }
 }

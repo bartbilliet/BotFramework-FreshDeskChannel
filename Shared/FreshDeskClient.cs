@@ -1,6 +1,5 @@
 ﻿using BotFramework.FreshDeskChannel.Models;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using static BotFramework.FreshDeskChannel.Models.BotResponseChannelData;
 
 namespace BotFramework.FreshDeskChannel
 {
@@ -146,6 +146,32 @@ namespace BotFramework.FreshDeskChannel
             catch (Exception ex)
             {
                 log.LogError("Exception occurred in SendFreshDeskNote: {1}", ex);
+                throw;
+            }
+        }
+
+        public static async Task SetTicketStatus(string ticketId, FreshDeskTicketStatus freshDeskTicketStatus, ILogger log)
+        {
+            try
+            {
+                SetFreshDeskAuthHeaders();
+
+                string stringData = JsonSerializer.Serialize(new { status = freshDeskTicketStatus });
+                var contentData = new StringContent(stringData, System.Text.Encoding.UTF8, "application/json");
+                HttpResponseMessage response = await client.PutAsync(freshDeskClientUrl + "tickets/" + ticketId, contentData);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    log.LogInformation("Updated the ticket status in FreshDesk");
+                }
+                else
+                {
+                    log.LogError("Error updating the ticket status in FreshDesk");
+                }
+            }
+            catch (Exception ex)
+            {
+                log.LogError("Exception occurred in SetTicketStatus: {1}", ex);
                 throw;
             }
         }
