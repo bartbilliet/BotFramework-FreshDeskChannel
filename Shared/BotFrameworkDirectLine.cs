@@ -52,6 +52,8 @@ namespace BotFramework.FreshDeskChannel
         {
             try
             {
+                log.LogInformation("Sending user message TO bot: " + freshDeskChannelData.Message);
+
                 Activity customerMessageActivity = new Activity
                 {
                     From = new ChannelAccount(fromUser),
@@ -81,6 +83,8 @@ namespace BotFramework.FreshDeskChannel
         {
             try
             {
+                log.LogInformation("Reading FROM bot messages");
+
                 ActivitySet activitySet = await client.Conversations.GetActivitiesAsync(conversationId, watermark);
 
                 activitySet.Activities = (from x in activitySet.Activities
@@ -89,7 +93,7 @@ namespace BotFramework.FreshDeskChannel
 
                 foreach (Activity activity in activitySet.Activities)
                 {
-                    log.LogInformation("BotMessage: " + activity.Text + "\n");
+                    log.LogInformation("BotMessage: " + activity.Text);
                 }
 
                 return activitySet;

@@ -25,6 +25,7 @@ namespace BotFramework.FreshDeskChannel.Models
         public DateTime Due_by { get; set; }
 
         public string MessageType { get; set; }
+        public bool? Private { get; set; }
 
         public string RequesterName { get; set; }
         public string FromEmail { get; set; }

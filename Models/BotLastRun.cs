@@ -5,7 +5,7 @@ using System.Text;
 
 namespace BotFramework.FreshDeskChannel.Models
 {
-    class FreshDeskBotLastRun
+    class BotLastRun
     {
         [JsonProperty(PropertyName = "id")]
         public string Id { get; set; }

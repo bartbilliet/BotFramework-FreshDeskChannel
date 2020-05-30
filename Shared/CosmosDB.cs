@@ -39,7 +39,7 @@ namespace BotFramework.FreshDeskChannel
             }
         }
 
-        public static async Task AddItemsToContainerAsync(FreshDeskBotState freshDeskBotState, ILogger log)
+        public static async Task AddItemsToContainerAsync(BotConversationState botConversationState, ILogger log)
         {
             try
             {
@@ -47,16 +47,16 @@ namespace BotFramework.FreshDeskChannel
                 await EnsureCosmosDBAsync(log);
 
                 // Read the item to see if it exists.  
-                ItemResponse<FreshDeskBotState> freshDeskBotStateResponse = await botStateContainer.ReadItemAsync<FreshDeskBotState>(freshDeskBotState.FreshDeskId, new PartitionKey(freshDeskBotState.FreshDeskId));
-                log.LogInformation("Conversation in database corresponding to FreshDeskId: {0} already exists\n", freshDeskBotStateResponse.Resource.BotConversationId);
+                ItemResponse<BotConversationState> botConversationStateResponse = await botStateContainer.ReadItemAsync<BotConversationState>(botConversationState.FreshDeskId, new PartitionKey(botConversationState.FreshDeskId));
+                log.LogInformation("Conversation in database corresponding to FreshDeskId: {0} already exists\n", botConversationStateResponse.Resource.BotConversationId);
             }
             catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
             {
                 try
                 {
                     // Create an item in the container
-                    ItemResponse<FreshDeskBotState> freshDeskBotStateResponse = await botStateContainer.CreateItemAsync(freshDeskBotState, new PartitionKey(freshDeskBotState.FreshDeskId)); 
-                    log.LogInformation("Created item in database with ConversationId: {0} \n", freshDeskBotStateResponse.Resource.BotConversationId);
+                    ItemResponse<BotConversationState> botConversationStateResponse = await botStateContainer.CreateItemAsync(botConversationState, new PartitionKey(botConversationState.FreshDeskId)); 
+                    log.LogInformation("Created item in database with ConversationId: {0} \n", botConversationStateResponse.Resource.BotConversationId);
                 }
                 catch (Exception ex2)
                 {
@@ -67,19 +67,19 @@ namespace BotFramework.FreshDeskChannel
 
         }
 
-        public static async Task<FreshDeskBotState> ReadItemAsync(string ticketId, ILogger log)
+        public static async Task<BotConversationState> ReadItemAsync(string ticketId, ILogger log)
         {
             //Connect to DB
             await EnsureCosmosDBAsync(log);
 
-            ItemResponse<FreshDeskBotState> freshDeskBotStateResponse;
+            ItemResponse<BotConversationState> botConversationStateResponse;
             try
             {
                 // Read the item to see if it exists.  
-                freshDeskBotStateResponse = await botStateContainer.ReadItemAsync<FreshDeskBotState>(ticketId, new PartitionKey(ticketId));
-                log.LogInformation("Conversation in database corresponding to FreshDeskId: {0} found\n", freshDeskBotStateResponse.Resource.BotConversationId);
+                botConversationStateResponse = await botStateContainer.ReadItemAsync<BotConversationState>(ticketId, new PartitionKey(ticketId));
+                log.LogInformation("Conversation in database corresponding to FreshDeskId: {0} found\n", botConversationStateResponse.Resource.BotConversationId);
 
-                return freshDeskBotStateResponse;
+                return botConversationStateResponse;
             }
             catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
             {
@@ -94,21 +94,21 @@ namespace BotFramework.FreshDeskChannel
 
         }
 
-        public static async Task ReplaceFreshDeskBotStateAsync(FreshDeskBotState freshDeskBotState, ILogger log)
+        public static async Task ReplaceFreshDeskBotStateAsync(BotConversationState botConversationState, ILogger log)
         {
             try
             {
                 //Connect to DB
                 await EnsureCosmosDBAsync(log);
 
-                ItemResponse<FreshDeskBotState> freshDeskBotStateResponse = await botStateContainer.ReadItemAsync<FreshDeskBotState>(freshDeskBotState.FreshDeskId, new PartitionKey(freshDeskBotState.FreshDeskId));
-                var itemBody = freshDeskBotStateResponse.Resource;
+                ItemResponse<BotConversationState> botConversationStateResponse = await botStateContainer.ReadItemAsync<BotConversationState>(botConversationState.FreshDeskId, new PartitionKey(botConversationState.FreshDeskId));
+                var itemBody = botConversationStateResponse.Resource;
 
                 // update bot watermark
-                itemBody.BotWatermark = freshDeskBotState.BotWatermark;
+                itemBody.BotWatermark = botConversationState.BotWatermark;
 
                 // replace the item with the updated content
-                freshDeskBotStateResponse = await botStateContainer.ReplaceItemAsync<FreshDeskBotState>(itemBody, freshDeskBotState.FreshDeskId, new PartitionKey(freshDeskBotState.FreshDeskId));
+                botConversationStateResponse = await botStateContainer.ReplaceItemAsync<BotConversationState>(itemBody, botConversationState.FreshDeskId, new PartitionKey(botConversationState.FreshDeskId));
                 log.LogInformation("Updated watermark to {0} for FreshDesk ID {1} with conversation ID {2}\n", itemBody.BotWatermark, itemBody.FreshDeskId, itemBody.BotConversationId);
             }
             catch (Exception ex)
@@ -124,7 +124,7 @@ namespace BotFramework.FreshDeskChannel
             DateTime lastRun;
 
             // Bootstrap object to update DB with new date
-            FreshDeskBotLastRun freshDeskBotLastRun = new FreshDeskBotLastRun()
+            BotLastRun freshDeskBotLastRun = new BotLastRun()
             {
                 Id = "0"
             };
@@ -138,8 +138,8 @@ namespace BotFramework.FreshDeskChannel
                 lastRunContainer = await database.CreateContainerIfNotExistsAsync("LastRun", "/id");
 
                 // Read the item to see if it exists.  
-                ItemResponse<FreshDeskBotLastRun> freshDeskBotLastRunResponse;
-                freshDeskBotLastRunResponse = await lastRunContainer.ReadItemAsync<FreshDeskBotLastRun>(freshDeskBotLastRun.Id, new PartitionKey(freshDeskBotLastRun.Id));
+                ItemResponse<BotLastRun> freshDeskBotLastRunResponse;
+                freshDeskBotLastRunResponse = await lastRunContainer.ReadItemAsync<BotLastRun>(freshDeskBotLastRun.Id, new PartitionKey(freshDeskBotLastRun.Id));
                 log.LogInformation("Last run time (GMT) was: {0}\n", freshDeskBotLastRunResponse.Resource.LastRun);
 
                 // Keep the last run time as return parameter of the function
@@ -147,7 +147,7 @@ namespace BotFramework.FreshDeskChannel
 
                 // Update the lastrun time in DB
                 freshDeskBotLastRun.LastRun = DateTime.Now.ToUniversalTime();
-                freshDeskBotLastRunResponse = await lastRunContainer.ReplaceItemAsync<FreshDeskBotLastRun>(freshDeskBotLastRun, freshDeskBotLastRun.Id, new PartitionKey(freshDeskBotLastRun.Id));
+                freshDeskBotLastRunResponse = await lastRunContainer.ReplaceItemAsync<BotLastRun>(freshDeskBotLastRun, freshDeskBotLastRun.Id, new PartitionKey(freshDeskBotLastRun.Id));
 
                 return lastRun;
             }
@@ -160,7 +160,7 @@ namespace BotFramework.FreshDeskChannel
                     // Set current time as initial value in DB
                     log.LogInformation("Setting initial last run time to: {0}", freshDeskBotLastRun.LastRun);
                     freshDeskBotLastRun.LastRun = DateTime.Now.ToUniversalTime();
-                    ItemResponse<FreshDeskBotLastRun> freshDeskBotStateResponse = await lastRunContainer.CreateItemAsync(freshDeskBotLastRun, new PartitionKey(freshDeskBotLastRun.Id));
+                    ItemResponse<BotLastRun> botConversationStateResponse = await lastRunContainer.CreateItemAsync(freshDeskBotLastRun, new PartitionKey(freshDeskBotLastRun.Id));
 
                     return lastRun;
                 }
@@ -172,7 +172,7 @@ namespace BotFramework.FreshDeskChannel
             }
         }
 
-        public static async Task<FreshDeskBotState> QueryItemsAsync(string ticketId, ILogger log)
+        public static async Task<BotConversationState> QueryItemsAsync(string ticketId, ILogger log)
         {
             try
             {
@@ -181,21 +181,21 @@ namespace BotFramework.FreshDeskChannel
 
                 var sqlQueryText = "SELECT * FROM c WHERE c.id = '" + ticketId + "'";   //TODO: add parameter
                 QueryDefinition queryDefinition = new QueryDefinition(sqlQueryText);
-                FeedIterator<FreshDeskBotState> queryResultSetIterator = botStateContainer.GetItemQueryIterator<FreshDeskBotState>(queryDefinition);
+                FeedIterator<BotConversationState> queryResultSetIterator = botStateContainer.GetItemQueryIterator<BotConversationState>(queryDefinition);
 
-                List<FreshDeskBotState> freshDeskBotStates = new List<FreshDeskBotState>();
+                List<BotConversationState> botConversationStates = new List<BotConversationState>();
 
                 while (queryResultSetIterator.HasMoreResults)
                 {
-                    FeedResponse<FreshDeskBotState> currentResultSet = await queryResultSetIterator.ReadNextAsync();
-                    foreach (FreshDeskBotState freshDeskBotState in currentResultSet)
+                    FeedResponse<BotConversationState> currentResultSet = await queryResultSetIterator.ReadNextAsync();
+                    foreach (BotConversationState botConversationState in currentResultSet)
                     {
-                        freshDeskBotStates.Add(freshDeskBotState);
-                        log.LogInformation("\tRead conversation ID {0} with watermark {1}\n", freshDeskBotState.BotConversationId, freshDeskBotState.BotWatermark);
+                        botConversationStates.Add(botConversationState);
+                        log.LogInformation("\tRead conversation ID {0} with watermark {1}\n", botConversationState.BotConversationId, botConversationState.BotWatermark);
                     }
                 }
 
-                return freshDeskBotStates[0];
+                return botConversationStates[0];
             }
             catch (Exception ex)
             {

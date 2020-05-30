@@ -22,11 +22,23 @@ Initial quick and dirty draft. Code not optimized yet, can still contain bugs. F
 
 (Hint: The channel can be easily tested by using the EchoBot sample in Bot Framework Composer)
 
+## Current features
+- Send bot responses back to customer as a ticket reply. This is the default bot response.
+- Add a private note for human engineer, instead of immediate responses to customer (via bot channeldata)
+  - To send a private note, and optionally notify an engineer, send following in the ChannelData with the bot message. The emails used must be valid agents registered in FreshDesk.
+
+```json
+  {
+    "MessageType": "note",
+    "Private": true,
+    "NotifyEmails": ["agent.1@domain.com", "agent.2@domain.com"]
+  }
+```
+
 ## Upcoming features
 - Allow for delayed bot responses (for example when human confirmation is required before the bot sends a response back)
 - Allow conversation termination when either a human agent is assigned, or the ticket status is marked as resolved
-- Allow adding a private note for human engineer, instead of immediate responses to customer (via bot channeldata)
 - Modifying ticket state after bot reply
-- Provide additional insights in what the bot is doing
 - Hand off ticket to human
+- Provide additional insights in what the bot is doing
 - Trim signatures from the tickets that have as source email

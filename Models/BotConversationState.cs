@@ -6,7 +6,7 @@ using System.Text;
 
 namespace BotFramework.FreshDeskChannel
 {
-    class FreshDeskBotState
+    class BotConversationState
     {
         public enum FreshDeskTicketStatus
         {

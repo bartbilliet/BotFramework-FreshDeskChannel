@@ -5,13 +5,14 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace BotFramework.FreshDeskChannel.Shared
 {
     public static class CustomChannelLogic
     {
-        private static FreshDeskBotState freshDeskBotState;
+        private static BotConversationState botConversationState;
 
         public static async Task ProcessChannel(IConfigurationRoot config, ILogger log)
         {
@@ -39,27 +40,27 @@ namespace BotFramework.FreshDeskChannel.Shared
             foreach (FreshDeskTicket FreshDeskTicket in listUpdatedFreshDeskTickets)
             {
                 //Start or continue conversation for ticketId
-                freshDeskBotState = await CosmosDB.ReadItemAsync(FreshDeskTicket.Id.ToString(), log);
-                if (freshDeskBotState == null)
+                botConversationState = await CosmosDB.ReadItemAsync(FreshDeskTicket.Id.ToString(), log);
+                if (botConversationState == null)
                 {
                     //start bot conversation
                     Conversation conversation = await BotFrameworkDirectLine.StartBotConversation(log);
                     log.LogInformation("Starting conversation ID: " + conversation.ConversationId);
 
                     //record new Bot conversation in CosmosDB, keeping track of TicketId<>BotConversationId
-                    freshDeskBotState = new FreshDeskBotState
+                    botConversationState = new BotConversationState
                     {
                         FreshDeskId = FreshDeskTicket.Id.ToString(),
                         BotConversationId = conversation.ConversationId,
                         BotWatermark = "0",
-                        Status = (FreshDeskBotState.FreshDeskTicketStatus)FreshDeskTicket.Status
+                        Status = (BotConversationState.FreshDeskTicketStatus)FreshDeskTicket.Status
                     };
-                    await CosmosDB.AddItemsToContainerAsync(freshDeskBotState, log);
+                    await CosmosDB.AddItemsToContainerAsync(botConversationState, log);
                 }
                 else
                 {
                     //continue bot conversation
-                    Conversation conversation = await BotFrameworkDirectLine.ContinueBotConveration(freshDeskBotState.BotConversationId, log);
+                    Conversation conversation = await BotFrameworkDirectLine.ContinueBotConveration(botConversationState.BotConversationId, log);
                     log.LogInformation("Continuing conversation ID: " + conversation.ConversationId);
                 }
 
@@ -83,6 +84,7 @@ namespace BotFramework.FreshDeskChannel.Shared
                         Product_id = FreshDeskTicket.Product_id,
                         Due_by = FreshDeskTicket.Due_by,
                         MessageType = "initial_message",
+                        Private = false,
                         FromEmail = FreshDeskTicket.Requester.Email,
                         RequesterName = FreshDeskTicket.Requester.Name,
                         Mobile = FreshDeskTicket.Requester.Mobile,
@@ -113,6 +115,7 @@ namespace BotFramework.FreshDeskChannel.Shared
                         Product_id = FreshDeskTicket.Product_id,
                         Due_by = FreshDeskTicket.Due_by,
                         MessageType = "continued_conversation",
+                        Private = incomingConversation.Private,
                         FromEmail = incomingConversation.From_email,
                         RequesterName = FreshDeskTicket.Requester.Name,
                         Mobile = FreshDeskTicket.Requester.Mobile,
@@ -126,24 +129,53 @@ namespace BotFramework.FreshDeskChannel.Shared
                 // Send new customer messages to Bot Framework for processing
                 foreach (FreshDeskChannelData freshDeskChannelData in listCustomerMessagesToProcess)
                 {
-                    //Send ticket updates to Bot
-                    log.LogInformation("Send user message to bot: " + freshDeskChannelData.Message);
-                    await BotFrameworkDirectLine.SendMessagesAsync(freshDeskBotState.BotConversationId, freshDeskChannelData, log);
+                    await BotFrameworkDirectLine.SendMessagesAsync(botConversationState.BotConversationId, freshDeskChannelData, log);
                 }
 
 
                 // Read any new Bot Framework responses on this ticket
-                ActivitySet activitySet = await BotFrameworkDirectLine.ReadBotMessagesAsync(freshDeskBotState.BotConversationId, freshDeskBotState.BotWatermark, log);
+                ActivitySet activitySet = await BotFrameworkDirectLine.ReadBotMessagesAsync(botConversationState.BotConversationId, botConversationState.BotWatermark, log);
 
-                //Send Bot Frameowrk responses back to FreshDesk as ticket responses to the customer
+                //Update the bot watermark in CosmosDB, to keep track which Bot Framework conversations we have already read
+                botConversationState.BotWatermark = activitySet?.Watermark;
+                await CosmosDB.ReplaceFreshDeskBotStateAsync(botConversationState, log);
+
+                //Send Bot Framework responses back to FreshDesk as ticket responses to the customer
                 foreach (Activity activity in activitySet.Activities)
                 {
-                    await FreshDeskClient.SendFreshDeskTicketReply(FreshDeskTicket.Id.ToString(), activity.Text, log);
+                    //If there is specific ChannelData add it to the message, otherwise default to standard customer reply message
+                    BotResponseChannelData botResponseChannelData;
+                    if (activity.ChannelData != null)
+                    {
+                        var options = new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        };
+                        botResponseChannelData = JsonSerializer.Deserialize<BotResponseChannelData>(activity.ChannelData.ToString(), options);
+                    }
+                    else
+                    {
+                        // Default to a standard reply message
+                        botResponseChannelData = new BotResponseChannelData
+                        {
+                            MessageType = "reply"
+                        };
+                    }
+
+                    // Send the bot response to FreshDesk in the chosen messageType (current allowed values: note, reply)
+                    switch(botResponseChannelData.MessageType)
+                    {
+                        case "note":
+                            await FreshDeskClient.SendFreshDeskNote(FreshDeskTicket.Id.ToString(), activity.Text, botResponseChannelData.Private, botResponseChannelData.NotifyEmails, log);
+                            break;
+
+                        case "reply":
+                            await FreshDeskClient.SendFreshDeskTicketReply(FreshDeskTicket.Id.ToString(), activity.Text, log);
+                            break;
+                    }
+
                 }
 
-                //Update the bot watermark in CosmosDB, to keep track which Bot Framework conversations we already processed
-                freshDeskBotState.BotWatermark = activitySet?.Watermark;
-                await CosmosDB.ReplaceFreshDeskBotStateAsync(freshDeskBotState, log);
             }
         }
     }
