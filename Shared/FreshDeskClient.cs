@@ -1,10 +1,13 @@
 ﻿using BotFramework.FreshDeskChannel.Models;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace BotFramework.FreshDeskChannel
@@ -50,14 +53,32 @@ namespace BotFramework.FreshDeskChannel
             try
             {
                 SetFreshDeskAuthHeaders();
+                
+                List<FreshDeskConversation> listConversations = new List<FreshDeskConversation>();
 
-                HttpResponseMessage response = await client.GetAsync(freshDeskClientUrl + "tickets/" + ticketId + "/conversations");
-                string stringData = await response.Content.ReadAsStringAsync();
-                var options = new JsonSerializerOptions
+                string nextUrl = freshDeskClientUrl + "tickets/" + ticketId + "/conversations"; //Base URL
+                do
                 {
-                    PropertyNameCaseInsensitive = true
-                };
-                List<FreshDeskConversation> listConversations = JsonSerializer.Deserialize<List<FreshDeskConversation>>(stringData, options);
+                    HttpResponseMessage response = await client.GetAsync(nextUrl);
+                    string stringData = await response.Content.ReadAsStringAsync();
+                    var options = new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    };
+                    listConversations.AddRange(JsonSerializer.Deserialize<List<FreshDeskConversation>>(stringData, options));
+
+                    // Get the URL for the next page
+                    if (response.Headers.Contains("link"))
+                    {
+                        nextUrl = ParseLinkHeader(response.Headers.GetValues("link").FirstOrDefault())["next"];
+                    }
+                    else {
+                        nextUrl = string.Empty;
+                    }
+
+                }
+                while (!string.IsNullOrEmpty(nextUrl)); 
+
 
                 return listConversations;
             }
@@ -128,5 +149,25 @@ namespace BotFramework.FreshDeskChannel
                 throw;
             }
         }
+
+        private static Dictionary<string, string> ParseLinkHeader(string linkHeader)
+        {
+            //<https://<acccount>.freshdesk.com/api/v2/tickets/90/conversations?page=2>; rel="next", <https://<acccount>.freshdesk.com/api/v2/tickets/90/conversations?page=5>; rel="last"
+            var dictionary = new Dictionary<string, string>();
+
+            string[] links = linkHeader.Split(',');
+            foreach (string linkEntry in links)
+            {
+                var searcher = new Regex("<(.*)>; rel=\"(.*)\"");
+                Match match = searcher.Match(linkEntry);
+                if (match.Groups.Count == 3)
+                {
+                    dictionary.Add(match.Groups[2].Value, match.Groups[1].Value);
+                }
+            }
+
+            return dictionary;
+        }
     }
 }
+
