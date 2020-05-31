@@ -26,26 +26,61 @@ Initial quick draft. Code can definitely still be optimized.
 - Send bot responses back to customer as a ticket reply. This is the default bot response.
 - Add a private note for human engineer, instead of immediate responses to customer (via bot channeldata).
   To send a private note, and optionally notify an engineer, send following in the ChannelData with the bot message. The email addresses used must be valid agents registered in FreshDesk, otherwise the message will fail.
-```json
-  {
-    "MessageType": "note",
-    "Private": true,
-    "NotifyEmails": ["agent.1@domain.com", "agent.2@domain.com"]
-  }
-```  
+  ```json
+    {
+      "MessageType": "note",
+      "Private": true,
+      "NotifyEmails": ["agent.1@domain.com", "agent.2@domain.com"]
+    }
+  ```  
 - Update the ticket status after bot reply. By default the bot will set the status to 'pending' after each reply. 
   To set a different status after the bot response, use following JSON as ChannelData in your bot response. The values to be used correspond to the [official FreshDesk API](https://developers.freshdesk.com/api/#update_ticket). 
-  Updating the ticket state is only possible on a 'reply' MessageType. 
-```json
+  Updating the ticket state is currently only possible on a 'reply' MessageType. 
+  ```json
+    {
+      "Message": "YourMessage",
+      "MessageType": "reply",
+      "Status": 4
+    }
+  ```  
+- Added extensibility for pre-processing of messages before they are sent to the Bot Framework, and post-processing on the bot responses. This allows for extensibility by sending messages through a Logic App connector, Azure Function, or other API integrations and can be used in scenarios such as for example translating bot messages. 
+  The extensibility is offered by setting the keys **PreProcessingExtensibility** and **PostProcessingExtensibility** in the Settings.json to the URL of your API which should accept the POST method. 
+  
+  The **pre-processing** extensibility API will (as an example) receive following object as POST data: 
+    ```json
   {
-    "MessageType": "reply",
-    "Status": 4
+        "TicketId": int,
+        "Subject": string,
+        "Message": string,
+        "Group_id": int,
+        "Responder_id": int,
+        "Source": int,
+        "Company_id": int,
+        "Status": int,
+        "Product_id": int,
+        "Due_by": string,
+        "MessageType": string,
+        "Private": boolean,
+        "RequesterName": string,
+        "FromEmail": string,
+        "Mobile": string,
+        "Phone": string
   }
-```  
+  ```
+
+  The **post-processing** extensibility API will (as an example) receive the following object as POST data:
+  ```json
+  {
+    "MessageType": string,
+    "Message": string,
+    "Private": boolean,
+    "NotifyEmails": array of strings,
+    "Status": int
+  }
+  ```
 
 ## Upcoming features
 - Allow for delayed bot responses (for example when human confirmation is required before the bot sends a response back)
 - Allow conversation termination when either a human agent is assigned, or the ticket status is marked as resolved
 - Hand off ticket to human
-- Provide additional insights in what the bot is doing
-- Trim signatures from the tickets that have as source email
+

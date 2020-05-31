@@ -2,7 +2,7 @@
 
 namespace BotFramework.FreshDeskChannel.Models
 {
-    class FreshDeskChannelData
+    public class FreshDeskChannelData
     {
         public enum FreshDeskTicketStatus
         {

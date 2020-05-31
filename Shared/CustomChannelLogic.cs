@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -14,6 +15,9 @@ namespace BotFramework.FreshDeskChannel.Shared
     public static class CustomChannelLogic
     {
         private static BotConversationState botConversationState;
+
+        private static string preProcessingExtensibility;
+        private static string postProcessingExtensibility;
 
         public static async Task ProcessChannel(IConfigurationRoot config, ILogger log)
         {
@@ -29,6 +33,9 @@ namespace BotFramework.FreshDeskChannel.Shared
 
             FreshDeskClient.freshDeskClientUrl = config["FreshDeskClientUrl"];
             FreshDeskClient.freshDeskAPIKey = config["FreshDeskAPIKey"];
+
+            preProcessingExtensibility = config["PreProcessingExtensibility"];
+            postProcessingExtensibility = config["PostProcessingExtensibility"];
 
             
             // Set last run time for differentials
@@ -143,7 +150,15 @@ namespace BotFramework.FreshDeskChannel.Shared
             // Send new customer messages to Bot Framework for processing
             foreach (FreshDeskChannelData freshDeskChannelData in listCustomerMessagesToProcess)
             {
-                await BotFrameworkDirectLine.SendMessagesAsync(botConversationState.BotConversationId, freshDeskChannelData, log);
+
+                // Run Pre-processing Extensibility
+                FreshDeskChannelData processedFreshDeskChannelData = freshDeskChannelData;
+                if (!String.IsNullOrEmpty(preProcessingExtensibility))
+                {
+                    processedFreshDeskChannelData = await PreProcessingExtensibility(preProcessingExtensibility, freshDeskChannelData, log);
+                }
+
+                await BotFrameworkDirectLine.SendMessagesAsync(botConversationState.BotConversationId, processedFreshDeskChannelData, log);
             }
 
 
@@ -172,25 +187,101 @@ namespace BotFramework.FreshDeskChannel.Shared
                     // Default to a standard reply message
                     botResponseChannelData = new BotResponseChannelData
                     {
+                        Message = activity.Text,
                         MessageType = "reply",
                         Status = BotResponseChannelData.FreshDeskTicketStatus.Pending
                     };
                 }
 
+                // Run post-processing Extensibility
+                BotResponseChannelData processedBotResponseChannelData = botResponseChannelData;
+                if (!String.IsNullOrEmpty(postProcessingExtensibility))
+                {
+                    processedBotResponseChannelData = await PostProcessingExtensibility(postProcessingExtensibility, botResponseChannelData, log);
+                }
+
                 // Send the bot response to FreshDesk in the chosen messageType (current allowed values: note, reply)
-                switch (botResponseChannelData.MessageType)
+                switch (processedBotResponseChannelData.MessageType)
                 {
                     case "note":
-                        await FreshDeskClient.SendFreshDeskNote(freshDeskTicket.Id.ToString(), activity.Text, botResponseChannelData.Private, botResponseChannelData.NotifyEmails, log);
+                        await FreshDeskClient.SendFreshDeskNote(freshDeskTicket.Id.ToString(), processedBotResponseChannelData.Message, processedBotResponseChannelData.Private, processedBotResponseChannelData.NotifyEmails, log);
                         break;
 
                     case "reply":
-                        await FreshDeskClient.SendFreshDeskTicketReply(freshDeskTicket.Id.ToString(), activity.Text, log);
-                        await FreshDeskClient.SetTicketStatus(freshDeskTicket.Id.ToString(), botResponseChannelData.Status, log);
+                        await FreshDeskClient.SendFreshDeskTicketReply(freshDeskTicket.Id.ToString(), processedBotResponseChannelData.Message, log);
+                        await FreshDeskClient.SetTicketStatus(freshDeskTicket.Id.ToString(), processedBotResponseChannelData.Status, log);
 
                         break;
                 }
 
+            }
+        }
+
+        public static async Task<FreshDeskChannelData> PreProcessingExtensibility(string preProcessingExtensibility, FreshDeskChannelData freshDeskChannelData, ILogger log)
+        {
+            try
+            {
+                log.LogInformation("Sending conversation to pre-processing extensibility");
+
+                HttpClient client = new HttpClient();
+
+                string stringData = JsonSerializer.Serialize(freshDeskChannelData);
+                var contentData = new StringContent(stringData, System.Text.Encoding.UTF8, "application/json");
+                HttpResponseMessage response = await client.PostAsync(preProcessingExtensibility, contentData);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    string responseData = await response.Content.ReadAsStringAsync();
+                    var options = new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    };
+                    return JsonSerializer.Deserialize<FreshDeskChannelData>(responseData, options);
+                }
+                else
+                {
+                    log.LogError("The configured processing extensibility returned an error");
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                log.LogError("Exception occurred in PreProcessingExtensibility: {1}", ex);
+                throw;
+            }
+        }
+
+        public static async Task<BotResponseChannelData> PostProcessingExtensibility(string postProcessingExtensibility, BotResponseChannelData botResponseChannelData, ILogger log)
+        {
+            try
+            {
+                log.LogInformation("Sending conversation to post-processing extensibility");
+
+                HttpClient client = new HttpClient();
+
+                string stringData = JsonSerializer.Serialize(botResponseChannelData);
+                var contentData = new StringContent(stringData, System.Text.Encoding.UTF8, "application/json");
+                HttpResponseMessage response = await client.PostAsync(postProcessingExtensibility, contentData);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    string responseData = await response.Content.ReadAsStringAsync();
+                    var options = new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    };
+                    return JsonSerializer.Deserialize<BotResponseChannelData>(responseData, options);
+                }
+                else
+                {
+                    log.LogError("The configured processing extensibility returned an error");
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                log.LogError("Exception occurred in PreProcessingExtensibility: {1}", ex);
+                throw;
             }
         }
     }

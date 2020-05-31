@@ -16,6 +16,7 @@ namespace BotFramework.FreshDeskChannel.Models
         }
 
         public string MessageType { get; set; }
+        public string Message { get; set; }
         public bool Private { get; set; }
         public string[] NotifyEmails { get; set; }
         public FreshDeskTicketStatus Status { get; set; }
