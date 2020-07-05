@@ -29,6 +29,8 @@ namespace BotFramework.FreshDeskChannel
         {
             try
             {
+                log.LogDebug("\t  Reading tickets updated since " + lastRun + " (GMT)");
+                
                 SetFreshDeskAuthHeaders();
 
                 HttpResponseMessage response = await client.GetAsync(freshDeskClientUrl + "tickets?updated_since=" + lastRun.ToString("yyyy-MM-ddTHH:mm:ssZ") + "&include=requester,description");
@@ -43,7 +45,7 @@ namespace BotFramework.FreshDeskChannel
             }
             catch (Exception ex)
             {
-                log.LogError("Exception occurred in GetUpdatedFreshDeskTicketsAsync: {1}", ex);
+                log.LogError("\t  Exception occurred in GetUpdatedFreshDeskTicketsAsync: {1}", ex);
                 throw;
             }
         }
@@ -52,6 +54,8 @@ namespace BotFramework.FreshDeskChannel
         {
             try
             {
+                log.LogDebug("\t  Getting all conversation messages on ticket #" + ticketId);
+
                 SetFreshDeskAuthHeaders();
                 
                 List<FreshDeskConversation> listConversations = new List<FreshDeskConversation>();
@@ -84,7 +88,7 @@ namespace BotFramework.FreshDeskChannel
             }
             catch (Exception ex)
             {
-                log.LogError("Exception occurred in GetFreshDeskTicketConversationsAsync: {1}", ex);
+                log.LogError("\t  Exception occurred in GetFreshDeskTicketConversationsAsync: {1}", ex);
                 throw;
             }
         }
@@ -93,24 +97,22 @@ namespace BotFramework.FreshDeskChannel
         {
             try
             {
+                log.LogDebug("\t  Sending ticket reply to FreshDesk ticket ID " + ticketId);
+
                 SetFreshDeskAuthHeaders();
 
                 string stringData = JsonSerializer.Serialize(new { body = responseMessage });
                 var contentData = new StringContent(stringData, System.Text.Encoding.UTF8, "application/json");
                 HttpResponseMessage response = await client.PostAsync(freshDeskClientUrl + "tickets/" + ticketId + "/reply", contentData);
 
-                if (response.IsSuccessStatusCode)
-                {
-                    log.LogInformation("Bot response sent to FreshDesk");
-                }
-                else
-                {
-                    log.LogError("Error sending Bot resonse to FreshDesk");
+                if (!response.IsSuccessStatusCode)
+                { 
+                    log.LogError("\t  Error sending Bot resonse to FreshDesk");
                 }
             }
             catch (Exception ex)
             {
-                log.LogError("Exception occurred in SendFreshDeskTicketReply: {1}", ex);
+                log.LogError("\t  Exception occurred in SendFreshDeskTicketReply: {1}", ex);
                 throw;
             }
         }
@@ -119,6 +121,8 @@ namespace BotFramework.FreshDeskChannel
         {
             try
             {
+                log.LogDebug("\t  Sending ticket note to FreshDesk ticket ID " + ticketId);
+
                 SetFreshDeskAuthHeaders();
 
                 // Only add when notification email addresses were added
@@ -134,18 +138,14 @@ namespace BotFramework.FreshDeskChannel
                 var contentData = new StringContent(stringData, System.Text.Encoding.UTF8, "application/json");
                 HttpResponseMessage response = await client.PostAsync(freshDeskClientUrl + "tickets/" + ticketId + "/notes", contentData);
 
-                if (response.IsSuccessStatusCode)
+                if (!response.IsSuccessStatusCode)
                 {
-                    log.LogInformation("Note from bot added in FreshDesk");
-                }
-                else
-                {
-                    log.LogError("Error sending note from Bot to FreshDesk");
+                    log.LogError("\t  Error sending note from Bot to FreshDesk");
                 }
             }
             catch (Exception ex)
             {
-                log.LogError("Exception occurred in SendFreshDeskNote: {1}", ex);
+                log.LogError("\t  Exception occurred in SendFreshDeskNote: {1}", ex);
                 throw;
             }
         }
@@ -154,24 +154,22 @@ namespace BotFramework.FreshDeskChannel
         {
             try
             {
+                log.LogDebug("\t  Updating ticket status for ticket ID #" + ticketId);
+
                 SetFreshDeskAuthHeaders();
 
                 string stringData = JsonSerializer.Serialize(new { status = freshDeskTicketStatus });
                 var contentData = new StringContent(stringData, System.Text.Encoding.UTF8, "application/json");
                 HttpResponseMessage response = await client.PutAsync(freshDeskClientUrl + "tickets/" + ticketId, contentData);
 
-                if (response.IsSuccessStatusCode)
+                if (!response.IsSuccessStatusCode)
                 {
-                    log.LogInformation("Updated the ticket status in FreshDesk");
-                }
-                else
-                {
-                    log.LogError("Error updating the ticket status in FreshDesk");
+                    log.LogError("\t  Error updating the ticket status in FreshDesk");
                 }
             }
             catch (Exception ex)
             {
-                log.LogError("Exception occurred in SetTicketStatus: {1}", ex);
+                log.LogError("\t  Exception occurred in SetTicketStatus: {1}", ex);
                 throw;
             }
         }

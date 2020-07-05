@@ -30,7 +30,7 @@ namespace BotFramework.FreshDeskChannel
                     .Build();
 
                 await CustomChannelLogic.ProcessChannel(config, log);
-
+                
                 return new OkObjectResult("Ok");
             }
             catch (Exception ex)

@@ -1,5 +1,5 @@
 # Custom FreshDesk channel for the Bot Framework
-Initial quick draft. Code can definitely still be optimized. 
+Quick draft. Code can definitely still be optimized. 
 
 ## Goal
 - Provide a community-driven custom channel for the Microsoft Bot Framework to allow reading from, and sending responses to, support tickets in the [FreshDesk customer service application](https://freshdesk.com/). 
@@ -18,6 +18,7 @@ Initial quick draft. Code can definitely still be optimized.
 - Add the [Direct Line channel](https://docs.microsoft.com/en-us/azure/bot-service/bot-service-channel-connect-directline?view=azure-bot-service-4.0) to your Bot in Azure. Copy the secret to **DirectLineSecret** and the name of the bot to **BotId** in the settings.json. 
 - Add the CosmosDB **CosmosDBEndpointUri**, **CosmosDBPrimaryKey**, **CosmosDBDatabaseId**, **CosmosDBContainerId** connection information to the Settings.json.  
 - Add the FreshDesk **FreshDeskClientUrl** and **FreshDeskAPIKey** to the Settings.json.
+- Configure the amount of days the channel will listen for proactive messages from the Bot (without new incoming messages in FreshDesk) via **MaxDaysToWaitForBotResponses** in the Settings.json. To always poll *ALL* conversations for possible proactive messages from the bot, set this value to 0. This will result in slower run cycles as the bot has processed more conversations.
 - Only newly updated tickets after the initial run will be processed, existing tickets will not be handled by Bot Framework. 
 
 (Hint: The channel can be easily tested by using the EchoBot sample in Bot Framework Composer)
@@ -43,10 +44,11 @@ Initial quick draft. Code can definitely still be optimized.
       "Status": 4
     }
   ```  
-- Added extensibility for pre-processing of messages before they are sent to the Bot Framework, and post-processing on the bot responses. This allows for extensibility by sending messages through a Logic App connector, Azure Function, or other API integrations and can be used in scenarios such as for example translating bot messages. 
+- The channel can listen for [proactive bot messages](https://docs.microsoft.com/en-us/azure/bot-service/bot-builder-howto-proactive-message) for a configurable number of days, without receiving new incoming customer messages on the FreshDesk ticket.
+- Extensibility for pre-processing of messages before they are sent to the Bot Framework, and post-processing on the bot responses. This allows for extensibility by sending messages through a Logic App connector, Azure Function, or other API integrations and can be used in scenarios such as for example translating bot messages. 
   The extensibility is offered by setting the keys **PreProcessingExtensibility** and **PostProcessingExtensibility** in the Settings.json to the URL of your API which should accept the POST method. 
   
-  The **pre-processing** extensibility API will (as an example) receive following object as POST data: 
+  The **pre-processing** extensibility API will receive following object as POST data: 
     ```json
   {
         "TicketId": int,
@@ -68,7 +70,7 @@ Initial quick draft. Code can definitely still be optimized.
   }
   ```
 
-  The **post-processing** extensibility API will (as an example) receive the following object as POST data:
+  The **post-processing** extensibility API will receive the following object as POST data:
   ```json
   {
     "MessageType": string,
@@ -80,7 +82,5 @@ Initial quick draft. Code can definitely still be optimized.
   ```
 
 ## Upcoming features
-- Allow for delayed bot responses (for example when human confirmation is required before the bot sends a response back)
-- Allow conversation termination when either a human agent is assigned, or the ticket status is marked as resolved
-- Hand off ticket to human
+- Send custom activities to the bot when the ticket assignment or status is updated
 

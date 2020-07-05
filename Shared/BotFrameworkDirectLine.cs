@@ -2,6 +2,7 @@
 using Microsoft.Bot.Connector.DirectLine;
 using Microsoft.Extensions.Logging;
 using System;
+using System.ComponentModel.Design;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -21,13 +22,17 @@ namespace BotFramework.FreshDeskChannel
             try
             {
                 client = new DirectLineClient(directLineSecret);
+                
+                //Fix silent retry issue which produces duplicate messages
+                client.SetRetryPolicy(new Microsoft.Rest.TransientFaultHandling.RetryPolicy(new Microsoft.Rest.TransientFaultHandling.HttpStatusCodeErrorDetectionStrategy(), 0));
+
                 Conversation conversation = await client.Conversations.StartConversationAsync();
 
                 return conversation;
             }
             catch (Exception ex)
             {
-                log.LogError("Exception occurred in StartBotConversation: {1}", ex);
+                log.LogError("\t  Exception occurred in StartBotConversation: {1}", ex);
                 throw;
             }
         }
@@ -37,13 +42,17 @@ namespace BotFramework.FreshDeskChannel
             try
             {
                 client = new DirectLineClient(directLineSecret);
+
+                //Fix silent retry issue which produces duplicate messages
+                //client.SetRetryPolicy(new Microsoft.Rest.TransientFaultHandling.RetryPolicy(new Microsoft.Rest.TransientFaultHandling.HttpStatusCodeErrorDetectionStrategy(), 0));
+
                 Conversation conversation = await client.Conversations.ReconnectToConversationAsync(conversationId);
 
                 return conversation;
             }
             catch (Exception ex)
             {
-                log.LogError("Exception occurred in ContinueBotConveration: {1}", ex);
+                log.LogError("\t  Exception occurred in ContinueBotConveration: {1}", ex);
                 throw;
             }
         }
@@ -52,7 +61,7 @@ namespace BotFramework.FreshDeskChannel
         {
             try
             {
-                log.LogInformation("Sending user message TO bot: " + freshDeskChannelData.Message);
+                log.LogTrace("\t  Sending FreshDesk message to Bot: " + freshDeskChannelData.Message);
 
                 Activity customerMessageActivity = new Activity
                 {
@@ -69,12 +78,13 @@ namespace BotFramework.FreshDeskChannel
                 //- https://github.com/microsoft/botframework-sdk/issues/5068
                 //- https://github.com/microsoft/botframework-sdk/issues/4559
 
+                // Don't wait for the response, we will poll later (leave possibility for back-end responses)
                 await client.Conversations.PostActivityAsync(conversationId, customerMessageActivity);
 
             }
             catch (Exception ex)
             {
-                log.LogError("Exception occurred in SendMessagesAsync: {1}", ex);
+                log.LogError("\t  Exception occurred in SendMessagesAsync: {1}", ex);
                 throw;
             }
         }
@@ -83,24 +93,24 @@ namespace BotFramework.FreshDeskChannel
         {
             try
             {
-                log.LogInformation("Reading FROM bot messages");
-
                 ActivitySet activitySet = await client.Conversations.GetActivitiesAsync(conversationId, watermark);
 
                 activitySet.Activities = (from x in activitySet.Activities
                                           where x.From.Id == botId
                                           select x).ToList();
 
+                log.LogDebug("\t  Retrieved " + activitySet.Activities.Count + " Bot responses for conversation with ID #" + conversationId);
+
                 foreach (Activity activity in activitySet.Activities)
                 {
-                    log.LogInformation("BotMessage: " + activity.Text);
+                    log.LogTrace("\t  Bot response: " + activity.Text);
                 }
 
                 return activitySet;
             }
             catch (Exception ex)
             {
-                log.LogError("Exception occurred in ReadBotMessagesAsync: {1}", ex);
+                log.LogError("\t  Exception occurred in ReadBotMessagesAsync: {1}", ex);
                 throw;
             }
         }
