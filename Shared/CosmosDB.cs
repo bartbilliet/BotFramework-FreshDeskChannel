@@ -5,7 +5,6 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace BotFramework.FreshDeskChannel
@@ -19,8 +18,16 @@ namespace BotFramework.FreshDeskChannel
 
         private static CosmosClient cosmosClient;
         private static Database database;
-        private static Microsoft.Azure.Cosmos.Container botStateContainer;
-        private static Microsoft.Azure.Cosmos.Container lastRunContainer;
+        private static Container botStateContainer;
+        private static Container lastRunContainer;
+
+        static CosmosDB()
+        {
+            cosmosDBEndpointUri = Environment.GetEnvironmentVariable("CosmosDBEndpointUri");
+            cosmosDBPrimaryKey = Environment.GetEnvironmentVariable("CosmosDBPrimaryKey");
+            cosmosDBDatabaseId = Environment.GetEnvironmentVariable("CosmosDBDatabaseId");
+            cosmosDBContainerId = Environment.GetEnvironmentVariable("CosmosDBContainerId");
+        }
 
         private static async Task EnsureCosmosDBAsync(ILogger log)
         {

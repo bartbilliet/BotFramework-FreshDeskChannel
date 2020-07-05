@@ -14,18 +14,16 @@ Quick draft. Code can definitely still be optimized.
   - *LastRun*: Keep track of last execution (only processes differentials to save API limits)
 
 ## How to set things up
-- Install your Bot logic (using BotFramework) on Azure. This should give you following components in Azure: App Service, CosmosDB, StorageAccount, Cognitive services (Luis). 
+- Install your Bot logic (using BotFramework) on Azure. This should give you following components in Azure: App Service, CosmosDB, StorageAccount, Cognitive services (LUIS). 
 - Add the [Direct Line channel](https://docs.microsoft.com/en-us/azure/bot-service/bot-service-channel-connect-directline?view=azure-bot-service-4.0) to your Bot in Azure. Copy the secret to **DirectLineSecret** and the name of the bot to **BotId** in the settings.json. 
-- Add the CosmosDB **CosmosDBEndpointUri**, **CosmosDBPrimaryKey**, **CosmosDBDatabaseId**, **CosmosDBContainerId** connection information to the Settings.json.  
+- Add the CosmosDB **CosmosDBEndpointUri**, **CosmosDBPrimaryKey**, **CosmosDBDatabaseId**, **CosmosDBContainerId** connection information to the settings.json.  
 - Add the FreshDesk **FreshDeskClientUrl** and **FreshDeskAPIKey** to the Settings.json.
-- Configure the amount of days the channel will listen for proactive messages from the Bot (without new incoming messages in FreshDesk) via **MaxDaysToWaitForBotResponses** in the Settings.json. To always poll *ALL* conversations for possible proactive messages from the bot, set this value to 0. This will result in slower run cycles as the bot has processed more conversations.
-- Only newly updated tickets after the initial run will be processed, existing tickets will not be handled by Bot Framework. 
-
-(Hint: The channel can be easily tested by using the EchoBot sample in Bot Framework Composer)
+- Configure the number of days the channel will listen for proactive messages from the Bot (without new incoming messages on the ticket in FreshDesk) via **MaxDaysToWaitForBotResponses** in the settings.json. To always poll *ALL* conversations for possible proactive messages from the bot, set this value to 0. This will result in slower run cycles when the bot has processed many conversations.
+- Only newly updated tickets after the initial run will be processed, existing tickets will not be handled by the FreshDesk channel for Bot Framework. 
 
 ## Current features
 - Send bot responses back to customer as a ticket reply. This is the default bot response.
-- Add a private note for human engineer, instead of immediate responses to customer (via bot channeldata).
+- Add a private note for human engineer, instead of immediate responses to customer (via bot ChannelData).
   To send a private note, and optionally notify an engineer, send following in the ChannelData with the bot message. The email addresses used must be valid agents registered in FreshDesk, otherwise the message will fail.
   ```json
     {
@@ -44,9 +42,9 @@ Quick draft. Code can definitely still be optimized.
       "Status": 4
     }
   ```  
-- The channel can listen for [proactive bot messages](https://docs.microsoft.com/en-us/azure/bot-service/bot-builder-howto-proactive-message) for a configurable number of days, without receiving new incoming customer messages on the FreshDesk ticket.
+- The channel can continue listening for [proactive bot messages](https://docs.microsoft.com/en-us/azure/bot-service/bot-builder-howto-proactive-message) for a configurable number of days after the last message on the FreshDesk ticket was received.
 - Extensibility for pre-processing of messages before they are sent to the Bot Framework, and post-processing on the bot responses. This allows for extensibility by sending messages through a Logic App connector, Azure Function, or other API integrations and can be used in scenarios such as for example translating bot messages. 
-  The extensibility is offered by setting the keys **PreProcessingExtensibility** and **PostProcessingExtensibility** in the Settings.json to the URL of your API which should accept the POST method. 
+  The extensibility is offered by setting the keys **PreProcessingExtensibility** and **PostProcessingExtensibility** in the settings.json to the URL of your API which should accept the POST method. 
   
   The **pre-processing** extensibility API will receive following object as POST data: 
     ```json
@@ -82,5 +80,5 @@ Quick draft. Code can definitely still be optimized.
   ```
 
 ## Upcoming features
-- Send custom activities to the bot when the ticket assignment or status is updated
+- Send custom activities to the bot when the ticket assignment or ticket status is updated.
 

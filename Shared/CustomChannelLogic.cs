@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using System.Net.NetworkInformation;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -14,30 +13,18 @@ namespace BotFramework.FreshDeskChannel.Shared
 {
     public static class CustomChannelLogic
     {
-        private static BotConversationState botConversationState;
-
         private static string preProcessingExtensibility;
         private static string postProcessingExtensibility;
         private static string maxDaysToWaitForBotResponses;
+
+        private static BotConversationState botConversationState;
 
         public static async Task ProcessChannel(IConfigurationRoot config, ILogger log)
         {
 
             //Read config values
-            BotFrameworkDirectLine.directLineSecret = config["DirectLineSecret"];
-            BotFrameworkDirectLine.botId = config["BotId"];
-
-            CosmosDB.cosmosDBEndpointUri = config["CosmosDBEndpointUri"];
-            CosmosDB.cosmosDBPrimaryKey = config["CosmosDBPrimaryKey"];
-            CosmosDB.cosmosDBDatabaseId = config["CosmosDBDatabaseId"];
-            CosmosDB.cosmosDBContainerId = config["CosmosDBContainerId"];
-
-            FreshDeskClient.freshDeskClientUrl = config["FreshDeskClientUrl"];
-            FreshDeskClient.freshDeskAPIKey = config["FreshDeskAPIKey"];
-
             preProcessingExtensibility = config["PreProcessingExtensibility"];
             postProcessingExtensibility = config["PostProcessingExtensibility"];
-
             maxDaysToWaitForBotResponses = config["MaxDaysToWaitForBotResponses"];
 
 

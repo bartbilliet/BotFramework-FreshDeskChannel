@@ -10,21 +10,30 @@ namespace BotFramework.FreshDeskChannel
 {
     class BotFrameworkDirectLine
     {
-
-        //DirectLine BotFramework connection parameters - currently filled in from main CustomChannelLogic class
         public static string directLineSecret;
         public static string botId;
         private static string fromUser = "FreshDeskChannel";
         private static DirectLineClient client;
 
+        static BotFrameworkDirectLine()
+        {
+            directLineSecret = Environment.GetEnvironmentVariable("DirectLineSecret");
+            botId = Environment.GetEnvironmentVariable("BotId");
+
+            client = new DirectLineClient(directLineSecret);
+
+            //Fix silent retry issue which produces duplicate messages
+            client.SetRetryPolicy(new Microsoft.Rest.TransientFaultHandling.RetryPolicy(new Microsoft.Rest.TransientFaultHandling.HttpStatusCodeErrorDetectionStrategy(), 0));
+        }
+
         public static async Task<Conversation> StartBotConversation(ILogger log)
         {
             try
             {
-                client = new DirectLineClient(directLineSecret);
+                //client = new DirectLineClient(directLineSecret);
                 
                 //Fix silent retry issue which produces duplicate messages
-                client.SetRetryPolicy(new Microsoft.Rest.TransientFaultHandling.RetryPolicy(new Microsoft.Rest.TransientFaultHandling.HttpStatusCodeErrorDetectionStrategy(), 0));
+                //client.SetRetryPolicy(new Microsoft.Rest.TransientFaultHandling.RetryPolicy(new Microsoft.Rest.TransientFaultHandling.HttpStatusCodeErrorDetectionStrategy(), 0));
 
                 Conversation conversation = await client.Conversations.StartConversationAsync();
 
@@ -41,7 +50,7 @@ namespace BotFramework.FreshDeskChannel
         {
             try
             {
-                client = new DirectLineClient(directLineSecret);
+                //client = new DirectLineClient(directLineSecret);
 
                 //Fix silent retry issue which produces duplicate messages
                 //client.SetRetryPolicy(new Microsoft.Rest.TransientFaultHandling.RetryPolicy(new Microsoft.Rest.TransientFaultHandling.HttpStatusCodeErrorDetectionStrategy(), 0));
@@ -74,11 +83,12 @@ namespace BotFramework.FreshDeskChannel
                 //TODO: Handle the silent retry issue when bot receives a 15s timeout (and therefore processes the message twice)
                 //This issue produces when Bot Framework code is hosted on App Service and the App Service goes to sleep. 
                 //Host the bot on App Service using AlwaysOn or Azure Function to avoid at this time.
+                //UPDATE: Possibly solved by the SetRetryPolicy in constructor.
                 //- https://github.com/microsoft/botframework-sdk/issues/3122
                 //- https://github.com/microsoft/botframework-sdk/issues/5068
                 //- https://github.com/microsoft/botframework-sdk/issues/4559
 
-                // Don't wait for the response, we will poll later (leave possibility for back-end responses)
+                // No need to wait for the response, we will poll later (leave possibility for back-end responses)
                 await client.Conversations.PostActivityAsync(conversationId, customerMessageActivity);
 
             }

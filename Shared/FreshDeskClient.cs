@@ -14,13 +14,16 @@ namespace BotFramework.FreshDeskChannel
 {
     public class FreshDeskClient
     {
-        //FreshDesk connection parameters - currently set from the main CustomChannelLogic function
-        private static HttpClient client = new HttpClient();
         public static string freshDeskClientUrl;
-        public static string freshDeskAPIKey;
+        public static string freshDeskAPIKey; 
+        private static HttpClient client;
 
-        private static void SetFreshDeskAuthHeaders()
+        static FreshDeskClient()
         {
+            freshDeskClientUrl = Environment.GetEnvironmentVariable("FreshDeskClientUrl");
+            freshDeskAPIKey = Environment.GetEnvironmentVariable("FreshDeskAPIKey");
+
+            client = new HttpClient();
             var byteArray = Encoding.ASCII.GetBytes(freshDeskAPIKey + ":dummypassword");
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
         }
@@ -31,8 +34,6 @@ namespace BotFramework.FreshDeskChannel
             {
                 log.LogDebug("\t  Reading tickets updated since " + lastRun + " (GMT)");
                 
-                SetFreshDeskAuthHeaders();
-
                 HttpResponseMessage response = await client.GetAsync(freshDeskClientUrl + "tickets?updated_since=" + lastRun.ToString("yyyy-MM-ddTHH:mm:ssZ") + "&include=requester,description");
                 string stringData = await response.Content.ReadAsStringAsync();
                 var options = new JsonSerializerOptions
@@ -55,8 +56,6 @@ namespace BotFramework.FreshDeskChannel
             try
             {
                 log.LogDebug("\t  Getting all conversation messages on ticket #" + ticketId);
-
-                SetFreshDeskAuthHeaders();
                 
                 List<FreshDeskConversation> listConversations = new List<FreshDeskConversation>();
 
@@ -99,8 +98,6 @@ namespace BotFramework.FreshDeskChannel
             {
                 log.LogDebug("\t  Sending ticket reply to FreshDesk ticket ID " + ticketId);
 
-                SetFreshDeskAuthHeaders();
-
                 string stringData = JsonSerializer.Serialize(new { body = responseMessage });
                 var contentData = new StringContent(stringData, System.Text.Encoding.UTF8, "application/json");
                 HttpResponseMessage response = await client.PostAsync(freshDeskClientUrl + "tickets/" + ticketId + "/reply", contentData);
@@ -122,8 +119,6 @@ namespace BotFramework.FreshDeskChannel
             try
             {
                 log.LogDebug("\t  Sending ticket note to FreshDesk ticket ID " + ticketId);
-
-                SetFreshDeskAuthHeaders();
 
                 // Only add when notification email addresses were added
                 string stringData;
@@ -155,8 +150,6 @@ namespace BotFramework.FreshDeskChannel
             try
             {
                 log.LogDebug("\t  Updating ticket status for ticket ID #" + ticketId);
-
-                SetFreshDeskAuthHeaders();
 
                 string stringData = JsonSerializer.Serialize(new { status = freshDeskTicketStatus });
                 var contentData = new StringContent(stringData, System.Text.Encoding.UTF8, "application/json");
